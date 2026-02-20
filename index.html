@@ -239,7 +239,13 @@
                 </div>
                 <div class="info-item">
                     <div class="icon">☎️</div>
-                    <div class="text"><div class="label">문의</div><div class="value"><a href="tel:010-2455-0867" style="color:var(--text);text-decoration:none">010-2455-0867</a></div></div>
+                    <div class="text">
+                        <div class="label">문의</div>
+                        <div class="value" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <a href="tel:010-2455-0867" style="color:var(--text);text-decoration:none">010-2455-0867 (이도아빠)</a>
+                            <button class="btn-copy" style="margin-top:0;padding:4px 12px;font-size:12px" onclick="copyText('01024550867', this)">복사</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -275,13 +281,16 @@
         <!-- Location -->
         <div class="location scroll-reveal">
             <h3>오시는 길</h3>
-            <iframe class="kakao-map" src="https://map.kakao.com/link/map/쿠우쿠우 골드 상봉점,37.59648501655944,127.08753554913437" frameborder="0"></iframe>
+            <div style="width:100%;border-radius:15px;overflow:hidden;margin-bottom:20px">
+                <iframe src="https://map.kakao.com/link/map/쿠우쿠우 골드 상봉점,37.59648501655944,127.08753554913437" width="100%" height="300" style="border:none;display:block" allowfullscreen></iframe>
+            </div>
             <div class="address">
                 <p><strong>쿠우쿠우 골드 상봉점</strong></p>
                 <p>서울시 중랑구 망우로 316 이지팰리스 3층</p>
-                <p>📞 매장: 02-433-6274</p>
+                <p style="margin-bottom:5px">📞 매장: 02-433-6274</p>
                 <p>🚇 상봉역 2번 출구 도보 2분</p>
                 <p>🚗 지하주차장 2시간 무료</p>
+                <button class="btn-copy" style="margin-top:8px" onclick="copyText('서울시 중랑구 망우로 316 이지팰리스 3층', this)">주소 복사</button>
             </div>
             <a href="https://map.kakao.com/link/to/쿠우쿠우 골드 상봉점,37.59648501655944,127.08753554913437" class="btn-map">카카오맵 길찾기 🚗</a>
             <a href="https://map.naver.com/p/search/쿠우쿠우 골드 상봉점" class="btn-map" style="background:#03C75A">네이버지도 길찾기 🗺️</a>
@@ -293,9 +302,9 @@
             <p class="sub">참석이 어려우신 분들을 위해 계좌번호를 안내드립니다</p>
             <div class="bank-card">
                 <div class="bank-label">아빠</div>
-                <div class="bank-info">카카오뱅크 3333-30-3965981</div>
+                <div class="bank-info">하나은행 113-910145-83407</div>
                 <div class="bank-name">이동영</div>
-                <button class="btn-copy" onclick="copyAccount('3333-30-3965981', this)">계좌번호 복사</button>
+                <button class="btn-copy" onclick="copyAccount('113-910145-83407', this)">계좌번호 복사</button>
             </div>
         </div>
 
@@ -497,7 +506,7 @@
         }
 
         function updateAttendance(newStatus, prevStatus) {
-            var att = JSON.parse(localStorage.getItem('attendance') || '{"yes":12,"total":18}');
+            var att = JSON.parse(localStorage.getItem('attendance') || '{"yes":0,"total":0}');
             if (prevStatus) {
                 att.total--;
                 if (prevStatus === 'yes') att.yes--;
@@ -514,7 +523,7 @@
         }
 
         // Init attendance
-        var savedAtt = JSON.parse(localStorage.getItem('attendance') || '{"yes":12,"total":18}');
+        var savedAtt = JSON.parse(localStorage.getItem('attendance') || '{"yes":0,"total":0}');
         renderAttendance(savedAtt);
         var savedRsvp = localStorage.getItem('rsvp_status');
         if (savedRsvp) {
@@ -523,14 +532,13 @@
             else btns[1].classList.add('active');
         }
 
-        // === Bank Account Copy ===
-        function copyAccount(account, btn) {
-            var num = account.replace(/-/g, '');
+        // === Copy Helpers ===
+        function doCopy(text, btn) {
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(num).then(function() { showCopied(btn); });
+                navigator.clipboard.writeText(text).then(function() { showCopied(btn); });
             } else {
                 var ta = document.createElement('textarea');
-                ta.value = num;
+                ta.value = text;
                 document.body.appendChild(ta);
                 ta.select();
                 document.execCommand('copy');
@@ -538,11 +546,18 @@
                 showCopied(btn);
             }
         }
+        function copyAccount(account, btn) {
+            doCopy(account.replace(/-/g, ''), btn);
+        }
+        function copyText(text, btn) {
+            doCopy(text, btn);
+        }
         function showCopied(btn) {
+            var orig = btn.textContent;
             btn.textContent = '복사 완료!';
             btn.classList.add('copied');
             setTimeout(function() {
-                btn.textContent = '계좌번호 복사';
+                btn.textContent = orig;
                 btn.classList.remove('copied');
             }, 2000);
         }
