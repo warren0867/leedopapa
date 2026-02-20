@@ -255,11 +255,6 @@
                 </div>
             </div>
             <div class="rsvp-result" id="rsvpResult"></div>
-            <div class="att-summary">
-                <div class="att-item"><div class="att-num" id="att-yes">0</div><div class="att-label">참석</div></div>
-                <div class="att-item"><div class="att-num" id="att-guests">0</div><div class="att-label">총 인원</div></div>
-                <div class="att-item"><div class="att-num" id="att-no">0</div><div class="att-label">불참</div></div>
-            </div>
             <div class="admin-list" id="adminList">
                 <h4>참석자 명단</h4>
                 <div id="adminEntries"></div>
@@ -295,6 +290,7 @@
             </div>
             <a href="https://map.kakao.com/link/to/쿠우쿠우 골드 상봉점,37.59648501655944,127.08753554913437" class="btn-map">카카오맵 길찾기 🚗</a>
             <a href="https://m.map.naver.com/directions/#/dname=%EC%BF%A0%EC%9A%B0%EC%BF%A0%EC%9A%B0%20%EA%B3%A8%EB%93%9C%20%EC%83%81%EB%B4%89%EC%A0%90&dlng=127.08753554913437&dlat=37.59648501655944" class="btn-map" style="background:#03C75A">네이버 길찾기 (대중교통) 🚇</a>
+            <a href="tmap://route?goalname=%EC%BF%A0%EC%9A%B0%EC%BF%A0%EC%9A%B0+%EA%B3%A8%EB%93%9C+%EC%83%81%EB%B4%89%EC%A0%90&goalx=127.08753554913437&goaly=37.59648501655944" class="btn-map" style="background:#1C6EF2">티맵 네비게이션 🧭</a>
         </div>
 
         <div class="bank-section scroll-reveal">
@@ -325,9 +321,7 @@
                 </div>
                 <button class="btn-submit" id="submitBtn" onclick="addComment()">메시지 남기기</button>
             </div>
-            <div class="comment-list" id="commentList">
-                <div class="loading-spinner">메시지를 불러오는 중...</div>
-            </div>
+            <div class="comment-list" id="commentList"></div>
         </div>
 
         <div class="share-section scroll-reveal">
@@ -357,37 +351,8 @@
 
     <script>
         // === Config ===
-        var API_URL = 'https://jsonblob.com/api/jsonBlob/019c78e9-455f-7802-92c2-bf66a76ca301';
+        var HOST_PHONE = '01024550867';
         var allPhotos = ['main.jpg','photo1.jpg','photo2.jpg','photo3.jpg','photo4.jpg','photo5.jpg','photo6.jpg','photo7.jpg','photo8.jpg','photo9.jpg','photo10.jpg','photo11.jpg','photo12.jpg','photo13.jpg','photo14.jpg','photo15.jpg','photo16.jpg'];
-
-        // === Persistent Data ===
-        var serverData = null;
-
-        function loadData() {
-            fetch(API_URL)
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    serverData = data;
-                    renderComments(data.comments || []);
-                    renderAttendance(data.rsvps || []);
-                    restoreRsvpState();
-                    if (isAdmin) renderAdminList(data.rsvps || []);
-                })
-                .catch(function() {
-                    serverData = { comments: [], rsvps: [] };
-                    document.getElementById('commentList').innerHTML = '<p style="text-align:center;color:#999;padding:20px">메시지를 불러올 수 없습니다</p>';
-                    renderAttendance([]);
-                    restoreRsvpState();
-                });
-        }
-
-        function saveData(data) {
-            return fetch(API_URL, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-        }
 
         // === D-Day Countdown ===
         var eventDate = new Date('2026-04-11T13:00:00+09:00');
@@ -500,101 +465,76 @@
             if (e.target === this || e.target.id === 'lightboxSwipe') closeLightbox();
         });
 
-        // === RSVP (Name-based, Server Persistent) ===
-        var isAdmin = window.location.search.indexOf('admin') !== -1;
-
+        // === RSVP ===
         function submitRSVP(status) {
             var name = document.getElementById('rsvpName').value.trim();
             if (!name) { alert('이름을 입력해주세요!'); return; }
 
             var guests = parseInt(document.getElementById('rsvpGuests').value) || 1;
-            var btnYes = document.getElementById('rsvpYes');
-            var btnNo = document.getElementById('rsvpNo');
-            btnYes.disabled = true;
-            btnNo.disabled = true;
 
-            // Load latest data first to avoid overwrites
-            fetch(API_URL)
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    serverData = data;
-                    var rsvps = data.rsvps || [];
+            // Save locally
+            localStorage.setItem('rsvp_name', name);
+            localStorage.setItem('rsvp_status', status);
+            localStorage.setItem('rsvp_guests', guests);
 
-                    // Remove existing entry with same name (update)
-                    rsvps = rsvps.filter(function(r) { return r.name !== name; });
-
-                    rsvps.push({ name: name, status: status, guests: guests, date: new Date().toISOString().slice(0, 10) });
-                    serverData.rsvps = rsvps;
-
-                    return saveData(serverData);
-                })
-                .then(function() {
-                    localStorage.setItem('rsvp_name', name);
-                    localStorage.setItem('rsvp_status', status);
-                    showRsvpResult(name, status);
-                    renderAttendance(serverData.rsvps);
-                    if (isAdmin) renderAdminList(serverData.rsvps);
-                    btnYes.disabled = false;
-                    btnNo.disabled = false;
-                })
-                .catch(function() {
-                    alert('저장에 실패했습니다. 다시 시도해주세요.');
-                    btnYes.disabled = false;
-                    btnNo.disabled = false;
-                });
-        }
-
-        function showRsvpResult(name, status) {
+            // Show result
             var el = document.getElementById('rsvpResult');
             if (status === 'yes') {
-                el.innerHTML = '<p style="font-size:16px;color:var(--accent);font-weight:500">' + escapeHtml(name) + '님, 참석 감사합니다! 💕</p><p style="font-size:13px;color:#999;margin-top:5px">변경하시려면 다시 제출해주세요</p>';
+                el.innerHTML = '<p style="font-size:16px;color:var(--accent);font-weight:500">' + escapeHtml(name) + '님, 참석 감사합니다! 💕</p><p style="font-size:13px;color:#999;margin-top:8px">이도아빠에게 문자로 알려주시면 감사하겠습니다</p>';
+                // Open SMS to host
+                var msg = '[이도 돌잔치 참석]\n이름: ' + name + '\n인원: ' + guests + '명';
+                setTimeout(function() {
+                    window.location.href = 'sms:' + HOST_PHONE + '?body=' + encodeURIComponent(msg);
+                }, 500);
             } else {
                 el.innerHTML = '<p style="font-size:16px;color:#999;font-weight:500">' + escapeHtml(name) + '님, 마음만 감사히 받겠습니다 🙏</p>';
             }
             el.classList.add('show');
+
+            // Hide form, show result
+            document.getElementById('rsvpForm').style.display = 'none';
         }
 
-        function restoreRsvpState() {
+        // Restore RSVP state
+        (function() {
             var savedName = localStorage.getItem('rsvp_name');
             var savedStatus = localStorage.getItem('rsvp_status');
-            if (savedName) {
-                document.getElementById('rsvpName').value = savedName;
-                showRsvpResult(savedName, savedStatus);
+            if (savedName && savedStatus) {
+                var el = document.getElementById('rsvpResult');
+                if (savedStatus === 'yes') {
+                    el.innerHTML = '<p style="font-size:16px;color:var(--accent);font-weight:500">' + escapeHtml(savedName) + '님, 참석 감사합니다! 💕</p><p style="font-size:13px;color:#999;margin-top:5px">변경하시려면 아래 버튼을 눌러주세요</p><button class="btn-copy" style="margin-top:10px" onclick="resetRsvp()">다시 응답하기</button>';
+                } else {
+                    el.innerHTML = '<p style="font-size:16px;color:#999;font-weight:500">' + escapeHtml(savedName) + '님, 마음만 감사히 받겠습니다 🙏</p><button class="btn-copy" style="margin-top:10px" onclick="resetRsvp()">다시 응답하기</button>';
+                }
+                el.classList.add('show');
+                document.getElementById('rsvpForm').style.display = 'none';
             }
+        })();
+
+        function resetRsvp() {
+            localStorage.removeItem('rsvp_name');
+            localStorage.removeItem('rsvp_status');
+            localStorage.removeItem('rsvp_guests');
+            document.getElementById('rsvpForm').style.display = 'block';
+            document.getElementById('rsvpResult').classList.remove('show');
+            document.getElementById('rsvpResult').innerHTML = '';
         }
 
-        function renderAttendance(rsvps) {
-            var yes = 0, no = 0, guests = 0;
-            (rsvps || []).forEach(function(r) {
-                if (r.status === 'yes') { yes++; guests += (r.guests || 1); }
-                else { no++; }
-            });
-            document.getElementById('att-yes').textContent = yes;
-            document.getElementById('att-guests').textContent = guests;
-            document.getElementById('att-no').textContent = no;
-        }
-
-        function renderAdminList(rsvps) {
-            var el = document.getElementById('adminEntries');
-            if (!rsvps || rsvps.length === 0) {
-                el.innerHTML = '<p style="color:#999;font-size:13px;text-align:center">아직 응답이 없습니다</p>';
-            } else {
-                var html = '';
-                rsvps.forEach(function(r) {
-                    var statusClass = r.status === 'yes' ? 'status-yes' : 'status-no';
-                    var statusText = r.status === 'yes' ? '참석 (' + (r.guests || 1) + '명)' : '불참';
-                    html += '<div class="admin-entry"><span class="name">' + escapeHtml(r.name) + '</span><span class="info ' + statusClass + '">' + statusText + '</span></div>';
-                });
-                el.innerHTML = html;
-            }
-            document.getElementById('adminList').classList.add('show');
-        }
-
-        // === Comments (Server Persistent) ===
+        // === Comments (localStorage) ===
         function escapeHtml(text) {
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function getComments() {
+            try {
+                return JSON.parse(localStorage.getItem('ido_comments') || '[]');
+            } catch (e) { return []; }
+        }
+
+        function saveComments(comments) {
+            localStorage.setItem('ido_comments', JSON.stringify(comments));
         }
 
         function renderComments(comments) {
@@ -615,31 +555,18 @@
             var name = document.getElementById('commentName').value.trim();
             var text = document.getElementById('commentText').value.trim();
             if (!name || !text) { alert('이름과 메시지를 모두 입력해주세요!'); return; }
-            if (!serverData) { alert('잠시 후 다시 시도해주세요.'); return; }
-
-            var btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.textContent = '등록 중...';
 
             var now = new Date();
             var dateStr = now.getFullYear() + '.' + String(now.getMonth() + 1).padStart(2, '0') + '.' + String(now.getDate()).padStart(2, '0');
             var newComment = { name: name, text: text, date: dateStr };
 
-            serverData.comments = serverData.comments || [];
-            serverData.comments.unshift(newComment);
+            var comments = getComments();
+            comments.unshift(newComment);
+            saveComments(comments);
+            renderComments(comments);
 
-            saveData(serverData).then(function() {
-                renderComments(serverData.comments);
-                document.getElementById('commentName').value = '';
-                document.getElementById('commentText').value = '';
-                btn.disabled = false;
-                btn.textContent = '메시지 남기기';
-            }).catch(function() {
-                alert('저장에 실패했습니다. 다시 시도해주세요.');
-                serverData.comments.shift();
-                btn.disabled = false;
-                btn.textContent = '메시지 남기기';
-            });
+            document.getElementById('commentName').value = '';
+            document.getElementById('commentText').value = '';
         }
 
         // === Copy Helpers ===
@@ -700,7 +627,7 @@
         reveals.forEach(function(el) { observer.observe(el); });
 
         // === Init ===
-        loadData();
+        renderComments(getComments());
     </script>
 </body>
 </html>
