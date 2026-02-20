@@ -109,10 +109,10 @@
         .slide-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); opacity: 0.4; transition: all 0.3s; cursor: pointer; }
         .slide-dot.active { opacity: 1; width: 24px; border-radius: 4px; background: var(--accent); }
         .slide-counter { font-size: 13px; color: #999; text-align: center; margin-top: 10px; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 20px; }
-        .gallery-thumb { border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s, opacity 0.2s; opacity: 0.6; border: 2px solid transparent; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 20px; }
+        .gallery-thumb { border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.2s, opacity 0.2s; opacity: 0.6; border: 2px solid transparent; }
         .gallery-thumb.active { opacity: 1; border-color: var(--accent); }
-        .gallery-thumb img { width: 100%; height: 60px; object-fit: cover; display: block; }
+        .gallery-thumb img { width: 100%; height: 80px; object-fit: cover; display: block; }
 
         .lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; }
         .lightbox.open { display: flex; }
@@ -249,6 +249,7 @@
                     <option value="4">본인 포함 4명</option>
                     <option value="5">본인 포함 5명 이상</option>
                 </select>
+                <p style="font-size:12px;color:#999;margin-bottom:10px;text-align:center">참석 버튼을 누르면 이도아빠에게 문자 보내기가 열립니다</p>
                 <div class="rsvp-btns">
                     <button class="rsvp-btn" id="rsvpYes" onclick="submitRSVP('yes')">참석합니다 ✅</button>
                     <button class="rsvp-btn" id="rsvpNo" onclick="submitRSVP('no')">불참 💌</button>
@@ -520,12 +521,17 @@
             document.getElementById('rsvpResult').innerHTML = '';
         }
 
-        // === Comments (localStorage) ===
+        // === Comments (localStorage + 기본 메시지) ===
         function escapeHtml(text) {
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
+
+        var defaultComments = [
+            { name: '할머니', text: '우리 이도 벌써 돌이라니! 건강하게 쑥쑥 자라렴 💕', date: '2026.02.15' },
+            { name: '고모', text: '조카 돌잔치 너무 기대돼요! 이도야 고모가 간다~ 🎂🎉', date: '2026.02.14' }
+        ];
 
         function getComments() {
             try {
@@ -537,12 +543,13 @@
             localStorage.setItem('ido_comments', JSON.stringify(comments));
         }
 
-        function renderComments(comments) {
+        function renderComments(userComments) {
+            var all = userComments.concat(defaultComments);
             var html = '';
-            comments.forEach(function(c) {
+            all.forEach(function(c) {
                 html += '<div class="comment-item"><div class="comment-header"><span class="comment-author">' + escapeHtml(c.name) + '</span><span class="comment-date">' + escapeHtml(c.date) + '</span></div><div class="comment-text">' + escapeHtml(c.text) + '</div></div>';
             });
-            document.getElementById('commentList').innerHTML = html || '<p style="text-align:center;color:#999;padding:20px">첫 번째 축하 메시지를 남겨주세요!</p>';
+            document.getElementById('commentList').innerHTML = html;
         }
 
         function addEmoji(emoji) {
